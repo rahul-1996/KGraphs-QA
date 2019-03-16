@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 # coding: utf-8
 
 # In[1]:
@@ -112,6 +112,12 @@ print("Save PyTorch model to {}".format('weights/'))
 torch.save(model.state_dict(),'weights/pytorch_weight')
 
 
+# In[ ]:
+
+
+
+
+
 # In[13]:
 
 
@@ -182,4 +188,10 @@ def convert_tf_checkpoint_to_pytorch(tf_checkpoint_path, bert_config_file, pytor
     # Save pytorch-model
     print("Save PyTorch model to {}".format(pytorch_dump_path))
     torch.save(model.state_dict(), pytorch_dump_path)
+
+
+# In[ ]:
+
+
+
 
