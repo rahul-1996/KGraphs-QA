@@ -16,9 +16,10 @@ class HParams:
         self.tag2idx = {v:k for k,v in enumerate(self.VOCAB)}
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
-        self.batch_size = 1
+        self.batch_size = 2
         self.lr = 0.0001
         self.n_epochs = 30 
+        self.hidden_size = 384
 
         self.tokenizer = BertTokenizer(vocab_file=parameters.VOCAB_FILE, do_lower_case=False)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -61,10 +62,8 @@ class NerDataset(data.Dataset):
             y.extend(yy)
 
         assert len(x)==len(y)==len(is_heads), f"len(x)={len(x)}, len(y)={len(y)}, len(is_heads)={len(is_heads)}"
-        print("len of x is", len(x))
         # seqlen
         seqlen = len(y)
-        print(f"\nseqlen is {seqlen}\n")
 
         # to string
         words = " ".join(words)
@@ -80,7 +79,6 @@ def pad(batch):
     tags = f(3)
     seqlens = f(-1)
     maxlen = np.array(seqlens).max()
-    print(f"\nmaxlen is {maxlen} \n")
 
     f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
     x = f(1, maxlen)
