@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 from pytorch_pretrained_bert import BertModel
+import pdb
 
-class Net(nn.Module):
+class RelNet(nn.Module):
     def __init__(self, config, bert_state_dict, vocab_len, device='cpu'):
         super().__init__()
         self.bert = BertModel(config)
@@ -39,7 +40,7 @@ class Net(nn.Module):
     def forward(self, x, hidden):
        
         x = x.to(self.device)
-
+        # pdb.set_trace()
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)
             enc = encoded_layers[-1]

@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils import data
-from new_model import Net
-from data_load import NerDataset, pad, HParams, device
+from ner_model import Net
+from relation_model import RelNet
+from data_load import NerDataset, pad, HParams, device, RelationDataset
 import os
 import numpy as np
 from pytorch_pretrained_bert.modeling import BertConfig
@@ -11,6 +12,7 @@ import parameters
 from collections import OrderedDict 
 import json
 from torch.autograd import Variable
+import pdb; 
 
 # prepare biobert dict
 # tmp_d = torch.load(parameters.BERT_CONFIG_FILE, map_location=lambda storage, location: 'cpu')
@@ -153,22 +155,59 @@ def eval(model, iterator, f):
 if __name__=="__main__":
 
 
-    train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
-    eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
+    # train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
+    # eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
+
+    # print('reached hereeeeee')
+    # # Define model
+    # config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
+    # model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
+    # # model.cuda()
+    # model.train()
+
+    # train_iter = data.DataLoader(dataset=train_dataset,
+    #                              batch_size=hp.batch_size,
+    #                              shuffle=True,
+    #                              num_workers=4,
+    #                              collate_fn=pad)
+    # eval_iter = data.DataLoader(dataset=eval_dataset,
+    #                              batch_size=hp.batch_size,
+    #                              shuffle=False,
+    #                              num_workers=4,
+    #                              collate_fn=pad)
+
+    # optimizer = optim.Adam(model.parameters(), lr = hp.lr)
+    # criterion = nn.CrossEntropyLoss(ignore_index=0)
+
+    # #updating hidden
+
+    # for epoch in range(1, 31):
+    #     train(model, train_iter, optimizer, criterion)
+    #     print(f"=========eval at epoch={epoch}=========")
+    #     if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
+    #     fname = os.path.join('checkpoints', str(epoch))
+    #     precision, recall, f1 = eval(model, eval_iter, fname)
+    #     torch.save(model.state_dict(), f"{fname}.pt")
+
+    #Adding relations model 
+
+    relations_train_dataset = NerDataset("Data/formatted/relationsTrain.tsv", 'relations')  
+    relations_eval_dataset = NerDataset("Data/formatted/relationsTest.tsv", 'relations')
 
     print('reached hereeeeee')
+    
     # Define model
     config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
-    model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
+    model = RelNet(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     # model.cuda()
     model.train()
 
-    train_iter = data.DataLoader(dataset=train_dataset,
+    train_iter = data.DataLoader(dataset=relations_train_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=True,
                                  num_workers=4,
                                  collate_fn=pad)
-    eval_iter = data.DataLoader(dataset=eval_dataset,
+    eval_iter = data.DataLoader(dataset=relations_eval_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=False,
                                  num_workers=4,
