@@ -3,36 +3,46 @@ import torch.nn as nn
 from pytorch_pretrained_bert import BertModel
 
 class Net(nn.Module):
-    def __init__(self, config, bert_state_dict, vocab_len, device = 'cpu'):
+    def __init__(self, config, bert_state_dict, vocab_len, device='cpu'):
         super().__init__()
         self.bert = BertModel(config)
+        self.num_layers = 2
+        self.input_size = 768
+        self.hidden_size = 768
+        '''
+        BERT always returns hidden_dim*2 dimensional representations. 
+        '''
         # if bert_state_dict is not None:
         #     self.bert.load_state_dict(bert_state_dict)
         self.bert.eval()
-        self.rnn = nn.LSTM(bidirectional=True, num_layers=2, input_size=768, hidden_size=768//2, batch_first=True)
-        self.fc = nn.Linear(768, vocab_len)
+        # Each input has vector size 768, and outpus a vector size of 768//2.
+        self.lstm = nn.LSTM(self.input_size, self.hidden_size//2, self.num_layers,
+                            batch_first=True, bidirectional=True)
+        self.fc = nn.Linear(self.hidden_size, vocab_len)
         self.device = device
 
-    def forward(self, x, y):
+    def init_hidden(self, batch_size):
+        ''' Initializes hidden state '''
+        # Create two new tensors with sizes n_layers x batch_size x hidden_dim,
+        # initialized to zero, for hidden state and cell state of LSTM
+        weight = next(self.parameters()).data
+        
+        if self.device == 'cuda':
+            hidden = (nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()).cuda(),
+                  nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()).cuda())
+        else:
+            hidden = (nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()),
+                      nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()))
+        
+        return hidden
+
+    def forward(self, x, hidden):
        
-        '''
-        x: (N, T). int64
-        y: (N, T). int64
-
-        Returns
-        enc: (N, T, VOCAB)
-        '''
-
         x = x.to(self.device)
-        y = y.to(self.device)
-        print(f"len of x in forward is {len(x)}")
 
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)
             enc = encoded_layers[-1]
-        print(f"len of enc is {len(enc)}")
-        enc, _ = self.rnn(enc)
-        logits = self.fc(enc)
-        print(len(logits))
-        y_hat = logits.argmax(-1)
-        return logits, y, y_hat
+        out, hidden = self.lstm(enc, hidden)
+        logits = self.fc(out)
+        return logits, hidden

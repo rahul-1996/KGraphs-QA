@@ -10,6 +10,7 @@ from pytorch_pretrained_bert.modeling import BertConfig
 import parameters
 from collections import OrderedDict 
 import json
+from torch.autograd import Variable
 
 # prepare biobert dict
 # tmp_d = torch.load(parameters.BERT_CONFIG_FILE, map_location=lambda storage, location: 'cpu')
@@ -35,35 +36,44 @@ for i in list(tmp_d.keys())[:199]:
         x = '.'.join(i.split('.')[1:])
     state_dict[x] = tmp_d[i]
 
-# print(f"state_dict is \n {state_dict}")
+hp = HParams('i2b2')
+#defining hidden state
+# hidden = torch.rand(2*2, hp.batch_size, hp.hidden_size)
+# nn.init.xavier_normal_(hidden)
+# c_0 = torch.rand(2*2, hp.batch_size, hp.hidden_size)
+# nn.init.xavier_normal_(c_0)
+
+clip = 5
 
 def train(model, iterator, optimizer, criterion):
     model.train()
+    hidden = model.init_hidden(hp.batch_size)
     for i, batch in enumerate(iterator):
         words, x, is_heads, tags, y, seqlens = batch
-        # print(f"\n\n{y}")
-        print(f"len of x in iterator is {len(x)} and {len(y)}")
         _y = y # for monitoring
+        hidden = tuple([each.data for each in hidden])
+
         optimizer.zero_grad()
-        logits, y, _ = model(x, y) # logits: (N, T, VOCAB), y: (N, T)
+        logits, hidden = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
 
         logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
         y = y.view(-1)  # (N*T,)
 
         loss = criterion(logits, y)
         loss.backward()
-
+        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+        nn.utils.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
 
-        if i==0:
-            print("=====sanity check======")
-            print("x:", x.cpu().numpy()[0])
-            print("words:", words[0])
-            print("tokens:", hp.tokenizer.convert_ids_to_tokens(x.cpu().numpy()[0]))
-            print("y:", _y.cpu().numpy()[0])
-            print("is_heads:", is_heads[0])
-            print("tags:", tags[0])
-            print("seqlen:", seqlens[0])
+        # if i==0:
+        #     print("=====sanity check======")
+        #     print("x:", x.cpu().numpy()[0])
+        #     print("words:", words[0])
+        #     print("tokens:", hp.tokenizer.convert_ids_to_tokens(x.cpu().numpy()[0]))
+        #     print("y:", _y.cpu().numpy()[0])
+        #     print("is_heads:", is_heads[0])
+        #     print("tags:", tags[0])
+        #     print("seqlen:", seqlens[0])
 
 
         if i%10==0: # monitoring
@@ -143,9 +153,8 @@ def eval(model, iterator, f):
 if __name__=="__main__":
 
 
-    train_dataset = NerDataset("Data/train-test.tsv", 'i2b2')  
-    eval_dataset = NerDataset("Data/test-test.tsv", 'i2b2')
-    hp = HParams('i2b2')
+    train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
+    eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
 
     print('reached hereeeeee')
     # Define model
@@ -153,9 +162,6 @@ if __name__=="__main__":
     model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     # model.cuda()
     model.train()
-    # update with already pretrained weight
-
-
 
     train_iter = data.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
@@ -169,10 +175,11 @@ if __name__=="__main__":
                                  collate_fn=pad)
 
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-    # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
-    for epoch in range(1, 5):
+    #updating hidden
+
+    for epoch in range(1, 31):
         train(model, train_iter, optimizer, criterion)
         print(f"=========eval at epoch={epoch}=========")
         if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
