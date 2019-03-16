@@ -38,7 +38,7 @@ for i in list(tmp_d.keys())[:199]:
         x = '.'.join(i.split('.')[1:])
     state_dict[x] = tmp_d[i]
 
-hp = HParams('i2b2')
+
 #defining hidden state
 # hidden = torch.rand(2*2, hp.batch_size, hp.hidden_size)
 # nn.init.xavier_normal_(hidden)
@@ -51,7 +51,7 @@ def train(model, iterator, optimizer, criterion):
     model.train()
     hidden = model.init_hidden(hp.batch_size)
     for i, batch in enumerate(iterator):
-        pdb.set_trace()
+        # pdb.set_trace()
         words, x, is_heads, tags, y, seqlens = batch
         _y = y # for monitoring
         hidden = tuple([each.data for each in hidden])
@@ -59,10 +59,10 @@ def train(model, iterator, optimizer, criterion):
         optimizer.zero_grad()
         logits, hidden = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
 
-        logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
-        y = y.view(-1)  # (N*T,)
+        # logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
+        # y = y.view(-1)  # (N*T,)
 
-        loss = criterion(logits, y)
+        loss = criterion(logits.squeeze(), y.float())
         loss.backward()
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         nn.utils.clip_grad_norm_(model.parameters(), clip)
@@ -155,6 +155,7 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
+    hp = HParams('i2b2')
 
     # train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
     # eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
@@ -192,6 +193,7 @@ if __name__=="__main__":
 
     #Adding relations model 
 
+    hp = HParams('relations')
     relations_train_dataset = RelationDataset("Data/formatted/relationsTrain.tsv", 'relations')  
     relations_eval_dataset = RelationDataset("Data/formatted/relationsTest.tsv", 'relations')
 
@@ -214,9 +216,10 @@ if __name__=="__main__":
                                  num_workers=4,
                                  collate_fn=pad)
 
+    # optimizer = optim.Adam(model.parameters(), lr = hp.lr)
+    # criterion = nn.CrossEntropyLoss(ignore_index=0)
+    criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-    criterion = nn.CrossEntropyLoss(ignore_index=0)
-
     #updating hidden
 
     for epoch in range(1, 31):

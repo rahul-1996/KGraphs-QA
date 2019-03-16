@@ -93,9 +93,9 @@ class RelationDataset(data.Dataset):
 
     def __getitem__(self, idx):
         words, tags = self.sents[idx], self.tags_li[idx] # words, tags: string list
-        print(words, tags)
         # We give credits only to the first piece.
         x, y = [], [] # list of ids
+        lengths = []
         is_heads = [] # list. 1: the token is the first piece of a word
         for W, t in zip(words, tags):
             xxx=[]
@@ -103,18 +103,17 @@ class RelationDataset(data.Dataset):
                 tokens = self.hp.tokenizer.tokenize(w) if w not in ("[CLS]", "[SEP]") else [w]
                 xx = self.hp.tokenizer.convert_tokens_to_ids(tokens)
                 xxx.extend(xx)
-            is_head = [1] + [0]*(len(tokens) - 1)
-
-            t = [t] + ["<PAD>"] * (len(tokens) - 1)  # <PAD>: no decision
+            # is_head = [1] + [0]*(len(tokens) - 1)
+            lengths.append(len(xxx))
+            t = [t] 
             yy = [self.hp.tag2idx[each] for each in t]  # (T,)
-            # print(xxx)
             x.append(xxx)
-            is_heads.extend(is_head)
+            # is_heads.extend(is_head)
             y.extend(yy)
 
-        assert len(x)==len(y)==len(is_heads), f"len(x)={len(x)}, len(y)={len(y)}, len(is_heads)={len(is_heads)}"
+        assert len(x)==len(y), f"len(x)={len(x)}, len(y)={len(y)}"
         # seqlen
-        seqlen = len(y)
+        seqlen = max(lengths)
 
         # to string
         words = " ".join(words[0])
@@ -128,13 +127,34 @@ def pad(batch):
     words = f(0)
     is_heads = f(2)
     tags = f(3)
-    seqlens = f(-1)
-    maxlen = np.array(seqlens).max()
+    seqlen = f(-1)
+    maxlen = np.array(seqlen).max()
+    x = f(1)
+    y = f(-2)
 
     f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
-    x = f(1, maxlen)
-    y = f(-2, maxlen)
+    for xx in range(len(x)):
+       
+        x[xx] = x[xx][0]
+        x[xx] = x[xx] + [0] * (maxlen - len(x[xx]))
 
     f = torch.LongTensor
+    return words, f(x), is_heads, tags, f(y), seqlen
 
-    return words, f(x), is_heads, tags, f(y), seqlens
+
+# def pad(batch):
+#     '''Pads to the longest sample'''
+#     f = lambda x: [sample[x] for sample in batch]
+#     words = f(0)
+#     is_heads = f(2)
+#     tags = f(3)
+#     seqlens = f(-1)
+#     maxlen = np.array(seqlens).max()
+
+#     f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
+#     x = f(1, maxlen)
+#     y = f(-2, maxlen)
+
+#     f = torch.LongTensor
+
+#     return words, f(x), is_heads, tags, f(y), seqlen
