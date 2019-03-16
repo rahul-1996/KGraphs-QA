@@ -38,14 +38,7 @@ for i in list(tmp_d.keys())[:199]:
         x = '.'.join(i.split('.')[1:])
     state_dict[x] = tmp_d[i]
 
-
-
-#defining hidden state
-# hidden = torch.rand(2*2, hp.batch_size, hp.hidden_size)
-# nn.init.xavier_normal_(hidden)
-# c_0 = torch.rand(2*2, hp.batch_size, hp.hidden_size)
-# nn.init.xavier_normal_(c_0)
-
+hp = HParams('relations')
 
 clip = 5
 
@@ -53,7 +46,7 @@ def train(model, iterator, optimizer, criterion):
     model.train()
     hidden = model.init_hidden(hp.batch_size)
     for i, batch in enumerate(iterator):
-        # pdb.set_trace()
+        pdb.set_trace()
         words, x, is_heads, tags, y, seqlens = batch
         _y = y # for monitoring
         hidden = tuple([each.data for each in hidden])
@@ -61,10 +54,10 @@ def train(model, iterator, optimizer, criterion):
         optimizer.zero_grad()
         logits, hidden = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
 
-        # logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
-        # y = y.view(-1)  # (N*T,)
+        logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
+        y = y.view(-1)  # (N*T,)
 
-        loss = criterion(logits.squeeze(), y.float())
+        loss = criterion(logits, y)
         loss.backward()
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         nn.utils.clip_grad_norm_(model.parameters(), clip)
@@ -146,48 +139,6 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
-<<<<<<< HEAD
-    hp = HParams('i2b2')
-
-    # train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
-    # eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
-
-    # print('reached hereeeeee')
-    # # Define model
-    # config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
-    # model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
-    # # model.cuda()
-    # model.train()
-
-    # train_iter = data.DataLoader(dataset=train_dataset,
-    #                              batch_size=hp.batch_size,
-    #                              shuffle=True,
-    #                              num_workers=4,
-    #                              collate_fn=pad)
-    # eval_iter = data.DataLoader(dataset=eval_dataset,
-    #                              batch_size=hp.batch_size,
-    #                              shuffle=False,
-    #                              num_workers=4,
-    #                              collate_fn=pad)
-
-    # optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-    # criterion = nn.CrossEntropyLoss(ignore_index=0)
-
-    # #updating hidden
-
-    # for epoch in range(1, 31):
-    #     train(model, train_iter, optimizer, criterion)
-    #     print(f"=========eval at epoch={epoch}=========")
-    #     if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
-    #     fname = os.path.join('checkpoints', str(epoch))
-    #     precision, recall, f1 = eval(model, eval_iter, fname)
-    #     torch.save(model.state_dict(), f"{fname}.pt")
-
-    #Adding relations model 
-
-    hp = HParams('relations')
-=======
->>>>>>> 5401bf0b4577e4875a6a48153893f915a8135872
     relations_train_dataset = RelationDataset("Data/formatted/relationsTrain.tsv", 'relations')  
     relations_eval_dataset = RelationDataset("Data/formatted/relationsTest.tsv", 'relations')
     
@@ -208,15 +159,8 @@ if __name__=="__main__":
                                  num_workers=4,
                                  collate_fn=pad)
 
-    # optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-    # criterion = nn.CrossEntropyLoss(ignore_index=0)
-    criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-<<<<<<< HEAD
-    #updating hidden
-=======
     criterion = nn.CrossEntropyLoss(ignore_index=0)
->>>>>>> 5401bf0b4577e4875a6a48153893f915a8135872
 
     for epoch in range(1, 31):
         train(model, train_iter, optimizer, criterion)
