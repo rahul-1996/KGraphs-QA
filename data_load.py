@@ -4,7 +4,13 @@ import parameters
 import torch 
 from pytorch_pretrained_bert import BertTokenizer
 
-device = 'cpu'
+
+train_on_gpu=torch.cuda.is_available()
+device = ''
+if train_on_gpu:
+    device = 'cuda'
+else:
+    device = 'cpu'
 
 class HParams:
     def __init__(self, vocab_type):
@@ -24,7 +30,6 @@ class HParams:
 
         self.tokenizer = BertTokenizer(vocab_file=parameters.VOCAB_FILE, do_lower_case=False)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 
 class NerDataset(data.Dataset):
     def __init__(self, path, vocab_type):
@@ -121,7 +126,7 @@ class RelationDataset(data.Dataset):
         return words, x, is_heads, tags, y, seqlen
 
 
-def pad(batch):
+def pad_rel(batch):
     '''Pads to the longest sample'''
     f = lambda x: [sample[x] for sample in batch]
     words = f(0)
@@ -142,19 +147,19 @@ def pad(batch):
     return words, f(x), is_heads, tags, f(y), seqlen
 
 
-# def pad(batch):
-#     '''Pads to the longest sample'''
-#     f = lambda x: [sample[x] for sample in batch]
-#     words = f(0)
-#     is_heads = f(2)
-#     tags = f(3)
-#     seqlens = f(-1)
-#     maxlen = np.array(seqlens).max()
+def pad_ner(batch):
+    '''Pads to the longest sample'''
+    f = lambda x: [sample[x] for sample in batch]
+    words = f(0)
+    is_heads = f(2)
+    tags = f(3)
+    seqlens = f(-1)
+    maxlen = np.array(seqlens).max()
 
-#     f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
-#     x = f(1, maxlen)
-#     y = f(-2, maxlen)
+    f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
+    x = f(1, maxlen)
+    y = f(-2, maxlen)
 
-#     f = torch.LongTensor
+    f = torch.cuda.LongTensor
 
-#     return words, f(x), is_heads, tags, f(y), seqlen
+    return words, f(x), is_heads, tags, f(y), seqlens

@@ -3,7 +3,7 @@ import torch.nn as nn
 from pytorch_pretrained_bert import BertModel
 
 class Net(nn.Module):
-    def __init__(self, config, bert_state_dict, vocab_len, device='cpu'):
+    def __init__(self, config, bert_state_dict, vocab_len, device='cuda'):
         super().__init__()
         self.bert = BertModel(config)
         self.num_layers = 2
@@ -38,10 +38,11 @@ class Net(nn.Module):
 
     def forward(self, x, hidden):       
         x = x.to(self.device)
-
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)
             enc = encoded_layers[-1]
         out, hidden = self.lstm(enc, hidden)
         logits = self.fc(out)
+        import pdb
+        pdb.set_trace()
         return logits, hidden

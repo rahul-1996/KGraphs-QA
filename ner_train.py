@@ -3,8 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils import data
 from ner_model import Net
-from relation_model import RelNet
-from data_load import NerDataset, pad, HParams, device, RelationDataset
+from data_load import NerDataset, pad_ner, HParams, device
 import os
 import numpy as np
 from pytorch_pretrained_bert.modeling import BertConfig
@@ -12,11 +11,18 @@ import parameters
 from collections import OrderedDict 
 import json
 from torch.autograd import Variable
-import pdb; 
+
+
+# First checking if GPU is available
+train_on_gpu=torch.cuda.is_available()
+
+if(train_on_gpu):
+    print('Training on GPU.')
+else:
+    print('No GPU available, training on CPU.')
+
 
 # prepare biobert dict
-# tmp_d = torch.load(parameters.BERT_CONFIG_FILE, map_location=lambda storage, location: 'cpu')
-
 tmp_d = {
   "attention_probs_dropout_prob": 0.1,
   "hidden_act": "gelu",
@@ -38,15 +44,15 @@ for i in list(tmp_d.keys())[:199]:
         x = '.'.join(i.split('.')[1:])
     state_dict[x] = tmp_d[i]
 
-hp = HParams('relations')
-
+hp = HParams('i2b2')
 clip = 5
 
 def train(model, iterator, optimizer, criterion):
+
     model.train()
     hidden = model.init_hidden(hp.batch_size)
+    
     for i, batch in enumerate(iterator):
-        pdb.set_trace()
         words, x, is_heads, tags, y, seqlens = batch
         _y = y # for monitoring
         hidden = tuple([each.data for each in hidden])
@@ -59,6 +65,7 @@ def train(model, iterator, optimizer, criterion):
 
         loss = criterion(logits, y)
         loss.backward()
+
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         nn.utils.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
@@ -139,25 +146,28 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
-    relations_train_dataset = RelationDataset("Data/formatted/relationsTrain.tsv", 'relations')  
-    relations_eval_dataset = RelationDataset("Data/formatted/relationsTest.tsv", 'relations')
+    train_dataset = NerDataset("Data/train-test.tsv", 'i2b2')  
+    eval_dataset = NerDataset("Data/test-test.tsv", 'i2b2')
     
     # Define model
     config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
-    model = RelNet(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
-    # model.cuda()
+    
+    model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
+    
+    if(train_on_gpu):
+        model.cuda()
     model.train()
 
-    train_iter = data.DataLoader(dataset=relations_train_dataset,
+    train_iter = data.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=True,
                                  num_workers=4,
-                                 collate_fn=pad)
-    eval_iter = data.DataLoader(dataset=relations_eval_dataset,
+                                 collate_fn=pad_ner)
+    eval_iter = data.DataLoader(dataset=eval_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=False,
                                  num_workers=4,
-                                 collate_fn=pad)
+                                 collate_fn=pad_ner)
 
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=0)

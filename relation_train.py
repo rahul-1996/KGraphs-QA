@@ -12,10 +12,6 @@ import parameters
 from collections import OrderedDict 
 import json
 from torch.autograd import Variable
-import pdb; 
-
-# prepare biobert dict
-# tmp_d = torch.load(parameters.BERT_CONFIG_FILE, map_location=lambda storage, location: 'cpu')
 
 tmp_d = {
   "attention_probs_dropout_prob": 0.1,
@@ -37,15 +33,6 @@ for i in list(tmp_d.keys())[:199]:
     if i.find('bert') > -1:
         x = '.'.join(i.split('.')[1:])
     state_dict[x] = tmp_d[i]
-
-
-
-#defining hidden state
-# hidden = torch.rand(2*2, hp.batch_size, hp.hidden_size)
-# nn.init.xavier_normal_(hidden)
-# c_0 = torch.rand(2*2, hp.batch_size, hp.hidden_size)
-# nn.init.xavier_normal_(c_0)
-
 
 clip = 5
 
@@ -146,7 +133,6 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
-<<<<<<< HEAD
     hp = HParams('i2b2')
 
     # train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
@@ -186,8 +172,6 @@ if __name__=="__main__":
     #Adding relations model 
 
     hp = HParams('relations')
-=======
->>>>>>> 5401bf0b4577e4875a6a48153893f915a8135872
     relations_train_dataset = RelationDataset("Data/formatted/relationsTrain.tsv", 'relations')  
     relations_eval_dataset = RelationDataset("Data/formatted/relationsTest.tsv", 'relations')
     
@@ -212,11 +196,7 @@ if __name__=="__main__":
     # criterion = nn.CrossEntropyLoss(ignore_index=0)
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-<<<<<<< HEAD
     #updating hidden
-=======
-    criterion = nn.CrossEntropyLoss(ignore_index=0)
->>>>>>> 5401bf0b4577e4875a6a48153893f915a8135872
 
     for epoch in range(1, 31):
         train(model, train_iter, optimizer, criterion)
