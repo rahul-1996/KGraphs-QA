@@ -79,10 +79,12 @@ class RelationDataset(data.Dataset):
         sents = []
         tags_li = []
         for entry in instances:
-            words = [line.split()[0] for line in entry.splitlines()]
-            tags = ([line.split()[-1] for line in entry.splitlines()])
-            sents.append(["[CLS]"] + words + ["[SEP]"])
-            tags_li.append(["<PAD>"] + tags + ["<PAD>"])
+            words = [line.split('\t')[0].split() for line in entry.splitlines()]
+            tags = ([line.split('\t')[-1] for line in entry.splitlines()])
+            # pdb.set_trace()
+            sents.append(words)
+            tags_li.append( tags)
+            # print(sents[0], tags_li[0])
         self.sents, self.tags_li = sents, tags_li
 
     def __len__(self):
@@ -91,20 +93,22 @@ class RelationDataset(data.Dataset):
 
     def __getitem__(self, idx):
         words, tags = self.sents[idx], self.tags_li[idx] # words, tags: string list
-
+        print(words, tags)
         # We give credits only to the first piece.
         x, y = [], [] # list of ids
         is_heads = [] # list. 1: the token is the first piece of a word
-        for w, t in zip(words, tags):
-            tokens = self.hp.tokenizer.tokenize(w) if w not in ("[CLS]", "[SEP]") else [w]
-            xx = self.hp.tokenizer.convert_tokens_to_ids(tokens)
-
+        for W, t in zip(words, tags):
+            xxx=[]
+            for w in W:
+                tokens = self.hp.tokenizer.tokenize(w) if w not in ("[CLS]", "[SEP]") else [w]
+                xx = self.hp.tokenizer.convert_tokens_to_ids(tokens)
+                xxx.extend(xx)
             is_head = [1] + [0]*(len(tokens) - 1)
 
             t = [t] + ["<PAD>"] * (len(tokens) - 1)  # <PAD>: no decision
             yy = [self.hp.tag2idx[each] for each in t]  # (T,)
-
-            x.extend(xx)
+            # print(xxx)
+            x.append(xxx)
             is_heads.extend(is_head)
             y.extend(yy)
 
@@ -113,7 +117,7 @@ class RelationDataset(data.Dataset):
         seqlen = len(y)
 
         # to string
-        words = " ".join(words)
+        words = " ".join(words[0])
         tags = " ".join(tags)
         return words, x, is_heads, tags, y, seqlen
 

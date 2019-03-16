@@ -51,6 +51,7 @@ def train(model, iterator, optimizer, criterion):
     model.train()
     hidden = model.init_hidden(hp.batch_size)
     for i, batch in enumerate(iterator):
+        pdb.set_trace()
         words, x, is_heads, tags, y, seqlens = batch
         _y = y # for monitoring
         hidden = tuple([each.data for each in hidden])
@@ -191,8 +192,8 @@ if __name__=="__main__":
 
     #Adding relations model 
 
-    relations_train_dataset = NerDataset("Data/formatted/relationsTrain.tsv", 'relations')  
-    relations_eval_dataset = NerDataset("Data/formatted/relationsTest.tsv", 'relations')
+    relations_train_dataset = RelationDataset("Data/formatted/relationsTrain.tsv", 'relations')  
+    relations_eval_dataset = RelationDataset("Data/formatted/relationsTest.tsv", 'relations')
 
     print('reached hereeeeee')
     
