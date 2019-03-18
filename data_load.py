@@ -5,12 +5,12 @@ import torch
 from pytorch_pretrained_bert import BertTokenizer
 
 
-train_on_gpu=torch.cuda.is_available()
-device = ''
-if train_on_gpu:
-    device = 'cuda'
-else:
-    device = 'cpu'
+# train_on_gpu=torch.cuda.is_available()
+# device = ''
+# if train_on_gpu:
+#     device = 'cuda'
+# else:
+#     device = 'cpu'
 
 class HParams:
     def __init__(self, vocab_type):
@@ -23,13 +23,14 @@ class HParams:
         self.tag2idx = {v:k for k,v in enumerate(self.VOCAB)}
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
-        self.batch_size = 2
+        self.batch_size = 4
         self.lr = 0.0001
         self.n_epochs = 30 
         self.hidden_size = 384
 
         self.tokenizer = BertTokenizer(vocab_file=parameters.VOCAB_FILE, do_lower_case=False)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # self.device = 'cpu'
 
 class NerDataset(data.Dataset):
     def __init__(self, path, vocab_type):
@@ -40,6 +41,9 @@ class NerDataset(data.Dataset):
         for entry in instances:
             words = [line.split()[0] for line in entry.splitlines()]
             tags = ([line.split()[-1] for line in entry.splitlines()])
+            if(len(words) > 2048):
+                words = words[0:2047]
+                tags = tags[0:2047]
             sents.append(["[CLS]"] + words + ["[SEP]"])
             tags_li.append(["<PAD>"] + tags + ["<PAD>"])
         self.sents, self.tags_li = sents, tags_li
@@ -69,6 +73,7 @@ class NerDataset(data.Dataset):
 
         assert len(x)==len(y)==len(is_heads), f"len(x)={len(x)}, len(y)={len(y)}, len(is_heads)={len(is_heads)}"
         # seqlen
+
         seqlen = len(y)
 
         # to string
@@ -161,5 +166,5 @@ def pad_ner(batch):
     y = f(-2, maxlen)
 
     f = torch.cuda.LongTensor
-
+    # f = torch.LongTensor
     return words, f(x), is_heads, tags, f(y), seqlens
