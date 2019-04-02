@@ -20,13 +20,14 @@ class HParams:
         self.tag2idx = {v:k for k,v in enumerate(self.VOCAB)}
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
-        self.batch_size = 1
+        self.batch_size = 4
         self.lr = 0.0001
         self.n_epochs = 30 
         self.hidden_size = 384
 
         self.tokenizer = BertTokenizer(vocab_file=parameters.VOCAB_FILE, do_lower_case=False)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # self.device = 'cpu'
 
 class NerDataset(data.Dataset):
     def __init__(self, path, vocab_type):
@@ -37,6 +38,9 @@ class NerDataset(data.Dataset):
         for entry in instances:
             words = [line.split()[0] for line in entry.splitlines()]
             tags = ([line.split()[-1] for line in entry.splitlines()])
+            if(len(words) > 2048):
+                words = words[0:2047]
+                tags = tags[0:2047]
             sents.append(["[CLS]"] + words + ["[SEP]"])
             tags_li.append(["<PAD>"] + tags + ["<PAD>"])
         self.sents, self.tags_li = sents, tags_li
@@ -66,6 +70,7 @@ class NerDataset(data.Dataset):
 
         assert len(x)==len(y)==len(is_heads), f"len(x)={len(x)}, len(y)={len(y)}, len(is_heads)={len(is_heads)}"
         # seqlen
+
         seqlen = len(y)
 
         # to string
@@ -83,18 +88,13 @@ def pad_ner(batch):
     '''Pads to the longest sample'''
     f = lambda x: [sample[x] for sample in batch]
     words = f(0)
-    # print(f"Calling f with -1: {f(-1)}")
-    # print(f"len of words is : {len(words[0])}")
     is_heads = f(2)
     tags = f(3)
     seqlens = f(-1)
     maxlen = np.array(seqlens).max()
-    # print(f"Maxlen is {maxlen}")
     f = lambda x, seqlen: [sample[x] + [0] * (seqlen - len(sample[x])) for sample in batch] # 0: <pad>
     x = f(1, maxlen)
-    # print(f"x is {len(x[0])}")
     y = f(-2, maxlen)
 
     f = torch.cuda.LongTensor
-
     return words, f(x), is_heads, tags, f(y), seqlens

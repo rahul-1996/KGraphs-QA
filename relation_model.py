@@ -20,7 +20,7 @@ class RelNet(nn.Module):
         self.lstm = nn.LSTM(self.input_size, self.hidden_size//2, self.num_layers,
                             batch_first=True, bidirectional=True)
         self.fc = nn.Linear(self.hidden_size, vocab_len)
-        self.sig = nn.Sigmoid()
+        self.sig = nn.Softmax()
         self.device = device
 
     def init_hidden(self, batch_size):
@@ -38,7 +38,7 @@ class RelNet(nn.Module):
         
         return hidden
 
-    def forward(self, x, hidden):
+    def forward(self,x,hidden):
        
         x = x.to(self.device)
         batch_size = x.size(0)
@@ -47,9 +47,10 @@ class RelNet(nn.Module):
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)
             enc = encoded_layers[-1]
-        out, hidden = self.lstm(enc, hidden)
+        out, hidden  = self.lstm(enc, hidden)
         logits = self.fc(out)
-        sig_out = self.sig(logits)
-        sig_out = sig_out.view(batch_size, -1)
-        sig_out = sig_out[:, -1]
-        return sig_out, hidden
+        # sig_out = self.sig(logits)
+        # sig_out = sig_out.view(batch_size, -1, )
+        logits = logits[:, -1]
+        y_hat = logits.argmax(-1)
+        return logits, hidden, y_hat
