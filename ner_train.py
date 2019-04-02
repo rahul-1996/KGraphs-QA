@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils import data
 from ner_model import Net
-from data_load import NerDataset, pad_ner, HParams, device
+from data_load import NerDataset, pad_ner, HParams
 import os
 import numpy as np
 from pytorch_pretrained_bert.modeling import BertConfig
@@ -12,15 +12,11 @@ from collections import OrderedDict
 import json
 from torch.autograd import Variable
 
+# device = 'cpu'
 
 # First checking if GPU is available
 train_on_gpu=torch.cuda.is_available()
-
-if(train_on_gpu):
-    print('Training on GPU.')
-else:
-    print('No GPU available, training on CPU.')
-
+device = 'cuda' if train_on_gpu else 'cpu'
 
 # prepare biobert dict
 tmp_d = {
@@ -50,6 +46,7 @@ clip = 5
 def train(model, iterator, optimizer, criterion):
 
     model.train()
+    model = model.to(device)
     hidden = model.init_hidden(hp.batch_size)
     
     for i, batch in enumerate(iterator):
@@ -58,7 +55,9 @@ def train(model, iterator, optimizer, criterion):
         hidden = tuple([each.data for each in hidden])
 
         optimizer.zero_grad()
-        logits, hidden = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
+        x = x.to(device)
+        y = y.to(device)
+        logits, hidden, _ = model(x, hiden) # logits: (N, T, VOCAB), y: (N, T)
 
         logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
         y = y.view(-1)  # (N*T,)
@@ -74,19 +73,21 @@ def train(model, iterator, optimizer, criterion):
             print(f"step: {i}, loss: {loss.item()}")
 
 def eval(model, iterator, f):
+    
     model.eval()
-
+    model.to(device)
     Words, Is_heads, Tags, Y, Y_hat = [], [], [], [], []
+    hidden = model.init_hidden(hp.batch_size)
     with torch.no_grad():
         for i, batch in enumerate(iterator):
             words, x, is_heads, tags, y, seqlens = batch
-
-            _, _, y_hat = model(x, y)  # y_hat: (N, T)
-
+            x = x.to(device)
+            y = y.to(device)
+            _, _, y_hat = model(x, hidden)  # y_hat: (N, T)
             Words.extend(words)
             Is_heads.extend(is_heads)
             Tags.extend(tags)
-            Y.extend(y.numpy().tolist())
+            Y.extend(y.cpu().numpy().tolist())
             Y_hat.extend(y_hat.cpu().numpy().tolist())
 
     ## gets results and save
@@ -146,34 +147,31 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
-    train_dataset = NerDataset("Data/train-test.tsv", 'i2b2')  
-    eval_dataset = NerDataset("Data/test-test.tsv", 'i2b2')
+    train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
+    eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
     
     # Define model
     config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
     
     model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     
-    if(train_on_gpu):
-        model.cuda()
-    model.train()
-
     train_iter = data.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=True,
-                                 num_workers=4,
                                  collate_fn=pad_ner)
     eval_iter = data.DataLoader(dataset=eval_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=False,
-                                 num_workers=4,
                                  collate_fn=pad_ner)
 
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
+    if(train_on_gpu):
+        model.cuda()
+
     for epoch in range(1, 31):
-        train(model, train_iter, optimizer, criterion)
+        # train(model, train_iter, optimizer, criterion)
         print(f"=========eval at epoch={epoch}=========")
         if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
         fname = os.path.join('checkpoints', str(epoch))

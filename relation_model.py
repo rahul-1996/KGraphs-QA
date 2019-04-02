@@ -42,6 +42,7 @@ class RelNet(nn.Module):
        
         x = x.to(self.device)
         batch_size = x.size(0)
+        print(f"size of x in forward is : {x.size()}")
         # pdb.set_trace()
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)

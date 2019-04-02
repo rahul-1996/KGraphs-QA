@@ -9,9 +9,7 @@ class Net(nn.Module):
         self.num_layers = 2
         self.input_size = 768
         self.hidden_size = 768
-        '''
-        BERT always returns hidden_dim*2 dimensional representations. 
-        '''
+        # BERT always returns hidden_dim*2 dimensional representations. 
         # if bert_state_dict is not None:
         #     self.bert.load_state_dict(bert_state_dict)
         self.bert.eval()
@@ -32,17 +30,17 @@ class Net(nn.Module):
                   nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()).cuda())
         else:
             hidden = (nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()),
-                      nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()))
+                  nn.init.xavier_normal_(weight.new(self.num_layers * 2, batch_size, self.hidden_size//2).zero_()))
         
         return hidden
 
-    def forward(self, x, hidden):       
-        x = x.to(self.device)
+    def forward(self, x, hidden):     
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)
             enc = encoded_layers[-1]
         out, hidden = self.lstm(enc, hidden)
         logits = self.fc(out)
-        import pdb
-        pdb.set_trace()
-        return logits, hidden
+        # softmax = torch.nn.Softmax(dim=2)
+        # logits = softmax(logits)
+        y_hat = logits.argmax(-1)
+        return logits, hidden, y_hat
