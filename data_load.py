@@ -13,34 +13,31 @@ class HParams:
     def __init__(self, vocab_type):
         
         self.VOCAB_DICT = {
-            'i2b2' : ('<PAD>', 'treatment', 'test', 'problem', 'O'),
+            'bc5cdr': ('<PAD>', 'B-Chemical', 'O', 'B-Disease' , 'I-Disease', 'I-Chemical'),
+            'i2b2' : ('<PAD>', 'B-treatment', 'B-test', 'B-problem', 'I-treatment', 'I-test', 'I-problem', 'O'),
             'relations' : ('<PAD>','TrCP', 'TeCP', 'TrWP', 'TeRP', 'PIP', 'TrAP', 'TrIP', 'TrNAP', 'None')
         }
         self.VOCAB = self.VOCAB_DICT[vocab_type]
         self.tag2idx = {v:k for k,v in enumerate(self.VOCAB)}
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
-        self.batch_size = 4
+        self.batch_size = 64
         self.lr = 0.0001
         self.n_epochs = 30 
         self.hidden_size = 384
 
         self.tokenizer = BertTokenizer(vocab_file=parameters.VOCAB_FILE, do_lower_case=False)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        # self.device = 'cpu'
 
 class NerDataset(data.Dataset):
     def __init__(self, path, vocab_type):
         self.hp = HParams(vocab_type)
-        instances = open(path).read().strip().split('\n\n\n\n\n')
+        instances = open(path).read().strip().split('\n\n')
         sents = []
         tags_li = []
         for entry in instances:
             words = [line.split()[0] for line in entry.splitlines()]
             tags = ([line.split()[-1] for line in entry.splitlines()])
-            if(len(words) > 2048):
-                words = words[0:2047]
-                tags = tags[0:2047]
             sents.append(["[CLS]"] + words + ["[SEP]"])
             tags_li.append(["<PAD>"] + tags + ["<PAD>"])
         self.sents, self.tags_li = sents, tags_li
@@ -76,11 +73,6 @@ class NerDataset(data.Dataset):
         # to string
         words = " ".join(words)
         tags = " ".join(tags)
-        if seqlen>2047:
-            x = x[0:2047]
-            y = y[0:2047]
-            is_heads = is_heads[0:2047]
-            seqlen = 2048
         return words, x, is_heads, tags, y, seqlen
 
 

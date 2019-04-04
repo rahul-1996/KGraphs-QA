@@ -26,7 +26,7 @@ tmp_d = {
   "hidden_size": 768,
   "initializer_range": 0.02,
   "intermediate_size": 3072,
-  "max_position_embeddings": 2048,
+  "max_position_embeddings": 512,
   "num_attention_heads": 12,
   "num_hidden_layers": 12,
   "type_vocab_size": 2,
@@ -50,27 +50,28 @@ def train(model, iterator, optimizer, criterion):
     hidden = model.init_hidden(hp.batch_size)
     
     for i, batch in enumerate(iterator):
-        words, x, is_heads, tags, y, seqlens = batch
-        _y = y # for monitoring
-        hidden = tuple([each.data for each in hidden])
+        if(i != 8):
+            words, x, is_heads, tags, y, seqlens = batch
+            _y = y # for monitoring
+            hidden = tuple([each.data for each in hidden])
 
-        optimizer.zero_grad()
-        x = x.to(device)
-        y = y.to(device)
-        logits, hidden, _ = model(x, hiden) # logits: (N, T, VOCAB), y: (N, T)
+            optimizer.zero_grad()
+            x = x.to(device)
+            y = y.to(device)
+            logits, hidden, _ = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
 
-        logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
-        y = y.view(-1)  # (N*T,)
+            logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
+            y = y.view(-1)  # (N*T,)
 
-        loss = criterion(logits, y)
-        loss.backward()
+            loss = criterion(logits, y)
+            loss.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        nn.utils.clip_grad_norm_(model.parameters(), clip)
-        optimizer.step()
+            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+            nn.utils.clip_grad_norm_(model.parameters(), clip)
+            optimizer.step()
 
-        if i%10==0: # monitoring
-            print(f"step: {i}, loss: {loss.item()}")
+            if i%2==0: # monitoring
+                print(f"step: {i}, loss: {loss.item()}")
 
 def eval(model, iterator, f):
     
@@ -80,15 +81,16 @@ def eval(model, iterator, f):
     hidden = model.init_hidden(hp.batch_size)
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            words, x, is_heads, tags, y, seqlens = batch
-            x = x.to(device)
-            y = y.to(device)
-            _, _, y_hat = model(x, hidden)  # y_hat: (N, T)
-            Words.extend(words)
-            Is_heads.extend(is_heads)
-            Tags.extend(tags)
-            Y.extend(y.cpu().numpy().tolist())
-            Y_hat.extend(y_hat.cpu().numpy().tolist())
+            if i!=7:
+                words, x, is_heads, tags, y, seqlens = batch
+                x = x.to(device)
+                y = y.to(device)
+                _, _, y_hat = model(x, hidden)  # y_hat: (N, T)
+                Words.extend(words)
+                Is_heads.extend(is_heads)
+                Tags.extend(tags)
+                Y.extend(y.cpu().numpy().tolist())
+                Y_hat.extend(y_hat.cpu().numpy().tolist())
 
     ## gets results and save
     with open(f, 'w') as fout:
@@ -155,8 +157,15 @@ if __name__=="__main__":
     
     model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     
-    train_iter = data.DataLoader(dataset=train_dataset,
+    # 'bc5cdr': ('<PAD>', 'B-Chemical', 'O', 'B-Disease' , 'I-Disease', 'I-Chemical'),
+
+    class_sample_count = [10, 1, 20, 3, 4] # dataset has 10 class-1 samples, 1 class-2 samples, etc.
+    weights = 1 / torch.Tensor(class_sample_count)
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, hp.batch_size)
+
+    train_iter = data.utils.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
+                                 sampler=sampler,
                                  shuffle=True,
                                  collate_fn=pad_ner)
     eval_iter = data.DataLoader(dataset=eval_dataset,
@@ -171,7 +180,7 @@ if __name__=="__main__":
         model.cuda()
 
     for epoch in range(1, 31):
-        # train(model, train_iter, optimizer, criterion)
+        train(model, train_iter, optimizer, criterion)
         print(f"=========eval at epoch={epoch}=========")
         if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
         fname = os.path.join('checkpoints', str(epoch))
