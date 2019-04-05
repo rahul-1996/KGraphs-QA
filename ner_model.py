@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from pytorch_pretrained_bert import BertModel
 
+
+
 class Net(nn.Module):
     def __init__(self, config, bert_state_dict, vocab_len, device='cuda'):
         super().__init__()
@@ -11,8 +13,8 @@ class Net(nn.Module):
         self.hidden_size = 768
         self.tagset_size = vocab_len
         # BERT always returns hidden_dim*2 dimensional representations. 
-        # if bert_state_dict is not None:
-        #     self.bert.load_state_dict(bert_state_dict)
+        if bert_state_dict is not None:
+             self.bert.load_state_dict(bert_state_dict)
         self.bert.eval()
         # Each input has vector size 768, and outpus a vector size of 768//2.
         self.lstm = nn.LSTM(self.input_size, self.hidden_size//2, self.num_layers,
