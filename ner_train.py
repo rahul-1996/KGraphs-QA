@@ -12,33 +12,13 @@ from collections import OrderedDict
 import json
 from torch.autograd import Variable
 
+from functools import partial
+import pickle
+
 # device = 'cpu'
+device = 'cuda'
 
-# First checking if GPU is available
-train_on_gpu=torch.cuda.is_available()
-device = 'cuda' if train_on_gpu else 'cpu'
-
-# prepare biobert dict
-tmp_d = {
-  "attention_probs_dropout_prob": 0.1,
-  "hidden_act": "gelu",
-  "hidden_dropout_prob": 0.1,
-  "hidden_size": 768,
-  "initializer_range": 0.02,
-  "intermediate_size": 3072,
-  "max_position_embeddings": 512,
-  "num_attention_heads": 12,
-  "num_hidden_layers": 12,
-  "type_vocab_size": 2,
-  "vocab_size": 28996
-}
-
-state_dict = OrderedDict()
-for i in list(tmp_d.keys())[:199]:
-    x = i
-    if i.find('bert') > -1:
-        x = '.'.join(i.split('.')[1:])
-    state_dict[x] = tmp_d[i]
+model_state_dict = torch.load('weights/save_file')
 
 hp = HParams('i2b2')
 clip = 5
@@ -50,7 +30,7 @@ def train(model, iterator, optimizer, criterion):
     hidden = model.init_hidden(hp.batch_size)
     
     for i, batch in enumerate(iterator):
-        if(i != 8):
+        if(i < 30):
             words, x, is_heads, tags, y, seqlens = batch
             _y = y # for monitoring
             hidden = tuple([each.data for each in hidden])
@@ -70,7 +50,7 @@ def train(model, iterator, optimizer, criterion):
             nn.utils.clip_grad_norm_(model.parameters(), clip)
             optimizer.step()
 
-            if i%2==0: # monitoring
+            if i%6==0: # monitoring
                 print(f"step: {i}, loss: {loss.item()}")
 
 def eval(model, iterator, f):
@@ -81,7 +61,7 @@ def eval(model, iterator, f):
     hidden = model.init_hidden(hp.batch_size)
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            if i!=7:
+            if i<10:
                 words, x, is_heads, tags, y, seqlens = batch
                 x = x.to(device)
                 y = y.to(device)
@@ -154,8 +134,7 @@ if __name__=="__main__":
     
     # Define model
     config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
-    
-    model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
+    model = Net(config = config, bert_state_dict = model_state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     
     # 'bc5cdr': ('<PAD>', 'B-Chemical', 'O', 'B-Disease' , 'I-Disease', 'I-Chemical'),
 
@@ -163,9 +142,8 @@ if __name__=="__main__":
     weights = 1 / torch.Tensor(class_sample_count)
     sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, hp.batch_size)
 
-    train_iter = data.utils.DataLoader(dataset=train_dataset,
+    train_iter = data.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
-                                 sampler=sampler,
                                  shuffle=True,
                                  collate_fn=pad_ner)
     eval_iter = data.DataLoader(dataset=eval_dataset,
@@ -176,6 +154,7 @@ if __name__=="__main__":
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
+    train_on_gpu = True
     if(train_on_gpu):
         model.cuda()
 

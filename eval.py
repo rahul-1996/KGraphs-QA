@@ -36,7 +36,7 @@ def process_query(query, hp, model):
     # Process query 
     model.eval()
     hp = HParams('i2b2')
-    hidden = model.init_hidden(hp.batch_size)
+    hidden = model.init_eval_hidden(hp.batch_size)
     _, _, y_pred = model(x, hidden)  # just a dummy y value
     preds = y_pred[0].cpu().numpy()[np.array(is_heads) == 1]  # Get prediction where head is 1 
 
@@ -55,6 +55,6 @@ def get_i2b2(query):
     return out
 
 if __name__ == '__main__':
-    query = "What are the symptoms of cardiac arrest?"
+    query = input()
     result = get_i2b2(query)
     print(result)

@@ -21,7 +21,7 @@ class HParams:
         self.tag2idx = {v:k for k,v in enumerate(self.VOCAB)}
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
-        self.batch_size = 64
+        self.batch_size = 128
         self.lr = 0.0001
         self.n_epochs = 30 
         self.hidden_size = 384
