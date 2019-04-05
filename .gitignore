@@ -1,6 +1,10 @@
 checkpoints/
 data-i2b2/
 weights/
+/Users/rahulsm/SolvingAlmostAnythingWithBert/Data
+/Users/rahulsm/SolvingAlmostAnythingWithBert/out-data
+/Users/rahulsm/SolvingAlmostAnythingWithBert/data-i2b2
+
 
 ./checkpoints/
 ./data-i2b2/
