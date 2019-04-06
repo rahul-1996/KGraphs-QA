@@ -54,7 +54,37 @@ def get_i2b2(query):
     out = process_query(query=query, hp=hp, model=i2b2_model)
     return out
 
+def get_ner(query):
+    hp = HParams('i2b2')
+    print("i2b2 -> ", query)
+    out = process_query(query=query, hp=hp, model=i2b2_model)
+    result = []
+    ners = []
+    for op in out:
+        if op[1] == 'O':
+            result.append(op[0])
+        elif op[1] == 'B-problem':
+            result.append('problem')
+            ners.append(op[0])
+        elif op[1] == 'I-problem':
+            ners[-1] = f"{ners[-1]} {op[0]}"
+        elif op[1] == 'B-test':
+            result.append('test')
+            ners.append(op[0])
+        elif op[1] == 'I-test':
+            ners[-1] = f"{ners[-1]} {op[0]}"
+        elif op[1] == 'B-treatment':
+            result.append('treatment') 
+            ners.append(op[0])
+        elif op[1] == 'I-treatment':
+            ners[-1] = f"{ners[-1]} {op[0]}"
+    return result, ners
+
 if __name__ == '__main__':
     query = input()
-    result = get_i2b2(query)
-    print(result)
+    res = get_i2b2(query)
+    print(res)
+    result, ners = get_ner(query)
+    que = " ".join(result)
+    print(que)
+    print(ners)

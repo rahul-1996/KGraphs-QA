@@ -150,42 +150,6 @@ if __name__=="__main__":
 
     hp = HParams('i2b2')
 
-    # train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
-    # eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
-
-    # print('reached hereeeeee')
-    # # Define model
-    # config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
-    # model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
-    # # model.cuda()
-    # model.train()
-
-    # train_iter = data.DataLoader(dataset=train_dataset,
-    #                              batch_size=hp.batch_size,
-    #                              shuffle=True,
-    #                              num_workers=4,
-    #                              collate_fn=pad)
-    # eval_iter = data.DataLoader(dataset=eval_dataset,
-    #                              batch_size=hp.batch_size,
-    #                              shuffle=False,
-    #                              num_workers=4,
-    #                              collate_fn=pad)
-
-    # optimizer = optim.Adam(model.parameters(), lr = hp.lr)
-    # criterion = nn.CrossEntropyLoss(ignore_index=0)
-
-    # #updating hidden
-
-    # for epoch in range(1, 31):
-    #     train(model, train_iter, optimizer, criterion)
-    #     print(f"=========eval at epoch={epoch}=========")
-    #     if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
-    #     fname = os.path.join('checkpoints', str(epoch))
-    #     precision, recall, f1 = eval(model, eval_iter, fname)
-    #     torch.save(model.state_dict(), f"{fname}.pt")
-
-    #Adding relations model 
-
     train_on_gpu=torch.cuda.is_available()
     hp = HParams('relations')
     relations_train_dataset = RelationDataset("Data/formatted/relationsTrainFinal.tsv", 'relations')  
