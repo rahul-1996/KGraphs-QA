@@ -8,6 +8,8 @@ import pandas as pd
 d = pd.read_excel("QA.xlsx", sheetname='Question-Intent')
 
 
+
+
 # In[11]:
 
 
@@ -87,7 +89,9 @@ def sortThird(val):
 def get_Intent(q):
     all=[]
     for x in list(d["Question"]):
-       # print(x  , "||" , list(d[d["Question"] == x]["Intent"])[0], "||", check_similarity(q, x))
+    # print(x  , "||" , list(d[d["Question"] == x]["Intent"])[0], "||", check_similarity(q, x))
+
+
         l=[]
         l.append(x)
         l.append(list(d[d["Question"] == x]["Intent"])[0])
@@ -98,8 +102,14 @@ def get_Intent(q):
 
 
 # In[13]:
+
 if __name__ == '__main__':
     query = "Does probleme also cause problem"
     intent = get_Intent(query)
     print("The intent is" , intent)
+
+
+
+
+
 

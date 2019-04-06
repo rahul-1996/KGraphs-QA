@@ -77,7 +77,6 @@ def get_ner(query):
 
 if __name__ == '__main__':
     query = input()
-    result, ners = get_ner(query)
-    que = " ".join(result)
-    print(que)
-    print(ners)
+    result = get_i2b2(query)
+    print(result)
+
