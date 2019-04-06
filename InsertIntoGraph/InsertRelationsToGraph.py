@@ -99,25 +99,25 @@ def getRelation(r):
         return "treatment_caused"
     elif(r=='TeCP'):
         #Test to detect Problem (outcome not known)
-        return "needs_test"
+        return "indicates_disease"
     elif(r == 'TrWP'):
         #Treatment made problem worse
-        return "treatment_worsened"
+        return "is_not_a_treatment"
     elif(r == "TeRP" ):
         #A test revealed a problem (outcome known)
-        return "shows"
+        return "indicates_disease"
     elif(r == "PIP"):
         #One medical problem (symptom) reveals or vauses another medical problem (disease)
-        return "is_symptom_of"
+        return "has_symptom"
     elif(r == "TrAP"):
         #Treatment given for a problem (Outcome not known)
-        return "treatment_given_for"
+        return "treats_disease"
     elif(r == "TrNAP"):
         #Treatment not adminstered/ stopped
         return "is_not_a_treatment"
     elif(r == "TrIP"):
         #Treatment imporves problem (Outcome Known)
-        return "is_treatment_for"
+        return "treats_disease"
 
 import os
 import pdb
