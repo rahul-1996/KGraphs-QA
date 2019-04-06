@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils import data
 from ner_model import Net
-from data_load import NerDataset, pad_ner, HParams, device
+from data_load import NerDataset, pad_ner, HParams
 import os
 import numpy as np
 from pytorch_pretrained_bert.modeling import BertConfig
@@ -12,37 +12,13 @@ from collections import OrderedDict
 import json
 from torch.autograd import Variable
 
+from functools import partial
+import pickle
 
-# First checking if GPU is available
-train_on_gpu=torch.cuda.is_available()
+# device = 'cpu'
+device = 'cuda'
 
-if(train_on_gpu):
-    print('Training on GPU.')
-else:
-    print('No GPU available, training on CPU.')
-
-
-# prepare biobert dict
-tmp_d = {
-  "attention_probs_dropout_prob": 0.1,
-  "hidden_act": "gelu",
-  "hidden_dropout_prob": 0.1,
-  "hidden_size": 768,
-  "initializer_range": 0.02,
-  "intermediate_size": 3072,
-  "max_position_embeddings": 2048,
-  "num_attention_heads": 12,
-  "num_hidden_layers": 12,
-  "type_vocab_size": 2,
-  "vocab_size": 28996
-}
-
-state_dict = OrderedDict()
-for i in list(tmp_d.keys())[:199]:
-    x = i
-    if i.find('bert') > -1:
-        x = '.'.join(i.split('.')[1:])
-    state_dict[x] = tmp_d[i]
+model_state_dict = torch.load('weights/save_file')
 
 hp = HParams('i2b2')
 clip = 5
@@ -50,44 +26,51 @@ clip = 5
 def train(model, iterator, optimizer, criterion):
 
     model.train()
+    model = model.to(device)
     hidden = model.init_hidden(hp.batch_size)
     
     for i, batch in enumerate(iterator):
-        words, x, is_heads, tags, y, seqlens = batch
-        _y = y # for monitoring
-        hidden = tuple([each.data for each in hidden])
+        if(i < 30):
+            words, x, is_heads, tags, y, seqlens = batch
+            _y = y # for monitoring
+            hidden = tuple([each.data for each in hidden])
 
-        optimizer.zero_grad()
-        logits, hidden = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
+            optimizer.zero_grad()
+            x = x.to(device)
+            y = y.to(device)
+            logits, hidden, _ = model(x, hidden) # logits: (N, T, VOCAB), y: (N, T)
 
-        logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
-        y = y.view(-1)  # (N*T,)
+            logits = logits.view(-1, logits.shape[-1]) # (N*T, VOCAB)
+            y = y.view(-1)  # (N*T,)
 
-        loss = criterion(logits, y)
-        loss.backward()
+            loss = criterion(logits, y)
+            loss.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        nn.utils.clip_grad_norm_(model.parameters(), clip)
-        optimizer.step()
+            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+            nn.utils.clip_grad_norm_(model.parameters(), clip)
+            optimizer.step()
 
-        if i%10==0: # monitoring
-            print(f"step: {i}, loss: {loss.item()}")
+            if i%6==0: # monitoring
+                print(f"step: {i}, loss: {loss.item()}")
 
 def eval(model, iterator, f):
+    
     model.eval()
-
+    model.to(device)
     Words, Is_heads, Tags, Y, Y_hat = [], [], [], [], []
+    hidden = model.init_hidden(hp.batch_size)
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            words, x, is_heads, tags, y, seqlens = batch
-
-            _, _, y_hat = model(x, y)  # y_hat: (N, T)
-
-            Words.extend(words)
-            Is_heads.extend(is_heads)
-            Tags.extend(tags)
-            Y.extend(y.numpy().tolist())
-            Y_hat.extend(y_hat.cpu().numpy().tolist())
+            if i<10:
+                words, x, is_heads, tags, y, seqlens = batch
+                x = x.to(device)
+                y = y.to(device)
+                _, _, y_hat = model(x, hidden)  # y_hat: (N, T)
+                Words.extend(words)
+                Is_heads.extend(is_heads)
+                Tags.extend(tags)
+                Y.extend(y.cpu().numpy().tolist())
+                Y_hat.extend(y_hat.cpu().numpy().tolist())
 
     ## gets results and save
     with open(f, 'w') as fout:
@@ -146,31 +129,34 @@ def eval(model, iterator, f):
 
 if __name__=="__main__":
 
-    train_dataset = NerDataset("Data/train-test.tsv", 'i2b2')  
-    eval_dataset = NerDataset("Data/test-test.tsv", 'i2b2')
+    train_dataset = NerDataset("Data/train.tsv", 'i2b2')  
+    eval_dataset = NerDataset("Data/test.tsv", 'i2b2')
     
     # Define model
     config = BertConfig(vocab_size_or_config_json_file=parameters.BERT_CONFIG_FILE)
+    model = Net(config = config, bert_state_dict = model_state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
     
-    model = Net(config = config, bert_state_dict = state_dict, vocab_len = len(hp.VOCAB), device=hp.device)
-    
-    if(train_on_gpu):
-        model.cuda()
-    model.train()
+    # 'bc5cdr': ('<PAD>', 'B-Chemical', 'O', 'B-Disease' , 'I-Disease', 'I-Chemical'),
+
+    class_sample_count = [10, 1, 20, 3, 4] # dataset has 10 class-1 samples, 1 class-2 samples, etc.
+    weights = 1 / torch.Tensor(class_sample_count)
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, hp.batch_size)
 
     train_iter = data.DataLoader(dataset=train_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=True,
-                                 num_workers=4,
                                  collate_fn=pad_ner)
     eval_iter = data.DataLoader(dataset=eval_dataset,
                                  batch_size=hp.batch_size,
                                  shuffle=False,
-                                 num_workers=4,
                                  collate_fn=pad_ner)
 
     optimizer = optim.Adam(model.parameters(), lr = hp.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
+
+    train_on_gpu = True
+    if(train_on_gpu):
+        model.cuda()
 
     for epoch in range(1, 31):
         train(model, train_iter, optimizer, criterion)

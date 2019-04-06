@@ -1,5 +1,4 @@
 VOCAB_FILE = 'weights/vocab.txt'
 BERT_CONFIG_FILE = 'weights/bert_config.json'
-# BC5CDR_WEIGHT = 'weights/bc5cdr_wt.pt'
-# BIONLP13CG_WEIGHT = 'weights/bionlp13cg_wt.pt'
 BERT_WEIGHTS = 'weights/pytorch_weight'
+I2b2_WEIGHTS = 'checkpoints/8.pt'
