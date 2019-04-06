@@ -15,26 +15,8 @@ from collections import OrderedDict
 import json
 from torch.autograd import Variable
 
-tmp_d = {
-  "attention_probs_dropout_prob": 0.1,
-  "hidden_act": "gelu",
-  "hidden_dropout_prob": 0.1,
-  "hidden_size": 768,
-  "initializer_range": 0.02,
-  "intermediate_size": 3072,
-  "max_position_embeddings": 2048,
-  "num_attention_heads": 12,
-  "num_hidden_layers": 12,
-  "type_vocab_size": 2,
-  "vocab_size": 28996
-}
 
-state_dict = OrderedDict()
-for i in list(tmp_d.keys())[:199]:
-    x = i
-    if i.find('bert') > -1:
-        x = '.'.join(i.split('.')[1:])
-    state_dict[x] = tmp_d[i]
+state_dict = torch.load('weights/save_file')
 
 clip = 5
 train_on_gpu=torch.cuda.is_available()
@@ -64,7 +46,7 @@ def train(model, iterator, optimizer, criterion):
         nn.utils.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
 
-        if i%10==0: # monitoring
+        if i%20==0: # monitoring
             print(f"step: {i}, loss: {loss.item()}")
 
 def eval(model, iterator, f):
@@ -81,7 +63,6 @@ def eval(model, iterator, f):
             y2 = y.view(-1)  # (N*T,)
 
             loss = criterion(logits, y2)
-            print("loss is" , loss)
             Words.extend(words)
             # Is_heads.extend(is_heads)
             Tags.extend(tags)
@@ -103,8 +84,6 @@ def eval(model, iterator, f):
     ## calc metric
     # y_true =  np.array([hp.tag2idx[line.split()[0]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
     # y_pred =  np.array([hp.tag2idx[line.split()[1]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
-    print( len(Preds))
-    print(len(Tags))
     num_proposed = len(Preds)
     num_correct = np.sum(array(Preds)==array(Tags))
     # num_gold = len(y_true[y_true>1])
@@ -181,7 +160,7 @@ if __name__=="__main__":
     for epoch in range(1, 31):
         train(model, train_iter, optimizer, criterion)
         print(f"=========eval at epoch={epoch}=========")
-        if not os.path.exists('checkpoints'): os.makedirs('checkpoints')
-        fname = os.path.join('checkpoints', str(epoch))
+        if not os.path.exists('checkpoints-rel'): os.makedirs('checkpoints-rel')
+        fname = os.path.join('checkpoints-rel', str(epoch))
         precision, recall, f1 = eval(model, eval_iter, fname)
         torch.save(model.state_dict(), f"{fname}.pt")
