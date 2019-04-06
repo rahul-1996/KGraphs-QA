@@ -1,6 +1,6 @@
 from eval import get_ner
-from qa.GetIntent-WordNetSoln import get_Intent
-from qa.ExecuteQueryGivenIntent import executeQuery
+from qa.intent import get_Intent
+from qa.execute import executeQuery
 
 query = "Does cardiac arrest cause thyroid"
 ner_result, ners = get_ner(query)
