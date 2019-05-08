@@ -15,6 +15,9 @@ from collections import OrderedDict
 import json
 from torch.autograd import Variable
 
+from sklearn.metrics import precision_recall_fscore_support
+
+model_state_dict = torch.load('./weights/save_file')
 
 state_dict = torch.load('weights/save_file')
 
@@ -82,8 +85,8 @@ def eval(model, iterator, f):
             # fout.write("\n")
 
     ## calc metric
-    # y_true =  np.array([hp.tag2idx[line.split()[0]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
-    # y_pred =  np.array([hp.tag2idx[line.split()[1]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
+    y_true =  np.array([hp.tag2idx[line.split()[0]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
+    y_pred =  np.array([hp.tag2idx[line.split()[1]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
     num_proposed = len(Preds)
     num_correct = np.sum(array(Preds)==array(Tags))
     # num_gold = len(y_true[y_true>1])
@@ -91,10 +94,12 @@ def eval(model, iterator, f):
     print(f"num_correct:{num_correct}")
     #print(f"num_gold:{num_gold}")
     try:
-        precision = num_correct / num_proposed
+        accuracy = num_correct / num_proposed
     except ZeroDivisionError:
         precision = 1.0
+    score = precision_recall_fscore_support(y_true,y_pred,average='weighted')
 
+    precision, recall, f1 = score[0], score[1], score[2]
     # try:
     #    recall = num_correct / num_gold
     #except ZeroDivisionError:
@@ -107,22 +112,24 @@ def eval(model, iterator, f):
     #        f1=1.0
     #    else:
     #        f1=0
-    recall = 0.0
-    f1 = 0.0
-    final = f + ".P%.2f_R%.2f_F%.2f" %(precision, recall, f1)
+    # recall = 0.0
+    # f1 = 0.0
+    final = f + ".P%.2f_R%.2f_F%.2f_A%.2f" %(precision, recall, f1, accuracy)
     with open(final, 'w') as fout:
         result = open(f, "r").read()
         fout.write(f"{result}\n")
 
         fout.write(f"precision={precision}\n")
-        # fout.write(f"recall={recall}\n")
-        # fout.write(f"f1={f1}\n")
+        fout.write(f"recall={recall}\n")
+        fout.write(f"f1={f1}\n")
+        fout.write(f"accuracy={accuracy}\n")
 
     os.remove(f)
 
     print("precision=%.2f"%precision)
-    # print("recall=%.2f"%recall)
-    # print("f1=%.2f"%f1)
+    print("recall=%.2f"%recall)
+    print("f1=%.2f"%f1)
+    print("accuracy=%.2f"%accuracy)
     return precision, recall, f1
 
 if __name__=="__main__":

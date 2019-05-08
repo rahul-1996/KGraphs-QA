@@ -1,5 +1,5 @@
 VOCAB_FILE = 'weights/vocab.txt'
 BERT_CONFIG_FILE = 'weights/bert_config.json'
 BERT_WEIGHTS = 'weights/pytorch_weight'
-I2b2_WEIGHTS = 'checkpoints/21.pt'
+I2b2_WEIGHTS = 'checkpoints/11.pt'
 RELATION_WEIGHTS = 'checkpoints-rel/29.pt'

@@ -1,7 +1,7 @@
 from py2neo import Graph
 
 
-graph = Graph("http://localhost:7474", username="neo4j", password="mamathahr")
+graph = Graph("bolt://ec2-54-224-85-24.compute-1.amazonaws.com:7687", username="neo4j", password="i-0264fccb248189ea5")
 #results= graph.run("MATCH (Test)-[:indicates_disease]-(x) WHERE Test.name =~ '(?i).*ekg.*' RETURN Test, x").to_data_frame()
 
 #print(results["Test"][0]["name"])

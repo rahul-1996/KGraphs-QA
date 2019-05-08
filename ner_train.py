@@ -11,14 +11,14 @@ import parameters
 from collections import OrderedDict 
 import json
 from torch.autograd import Variable
-
+from sklearn.metrics import f1_score
 from functools import partial
 import pickle
-
+from sklearn.metrics import precision_recall_fscore_support
 # device = 'cpu'
 device = 'cuda'
 
-model_state_dict = torch.load('weights/save_file')
+model_state_dict = torch.load('./weights/save_file')
 
 hp = HParams('i2b2')
 clip = 5
@@ -86,46 +86,24 @@ def eval(model, iterator, f):
     y_true =  np.array([hp.tag2idx[line.split()[1]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
     y_pred =  np.array([hp.tag2idx[line.split()[2]] for line in open(f, 'r').read().splitlines() if len(line) > 0])
 
-    num_proposed = len(y_pred[y_pred>1])
-    num_correct = (np.logical_and(y_true==y_pred, y_true>1)).astype(np.int).sum()
-    num_gold = len(y_true[y_true>1])
+    score = precision_recall_fscore_support(y_true,y_pred,average='weighted')
 
-    print(f"num_proposed:{num_proposed}")
-    print(f"num_correct:{num_correct}")
-    print(f"num_gold:{num_gold}")
-    try:
-        precision = num_correct / num_proposed
-    except ZeroDivisionError:
-        precision = 1.0
-
-    try:
-        recall = num_correct / num_gold
-    except ZeroDivisionError:
-        recall = 1.0
-
-    try:
-        f1 = 2*precision*recall / (precision + recall)
-    except ZeroDivisionError:
-        if precision*recall==0:
-            f1=1.0
-        else:
-            f1=0
-
+    precision, recall, f1 = score[0], score[1], score[2]
     final = f + ".P%.2f_R%.2f_F%.2f" %(precision, recall, f1)
     with open(final, 'w') as fout:
         result = open(f, "r").read()
         fout.write(f"{result}\n")
 
-        fout.write(f"precision={precision}\n")
-        fout.write(f"recall={recall}\n")
-        fout.write(f"f1={f1}\n")
+        fout.write(f"precision={score[0]}\n")
+        fout.write(f"recall={score[1]}\n")
+        fout.write(f"f1={score[2]}\n")
 
     os.remove(f)
 
-    print("precision=%.2f"%precision)
-    print("recall=%.2f"%recall)
-    print("f1=%.2f"%f1)
-    return precision, recall, f1
+    print("precision=%.2f"%score[0])
+    print("recall=%.2f"%score[1])
+    print("f1=%.2f"%score[2])
+    return score[0], score[1], score[2]
 
 if __name__=="__main__":
 

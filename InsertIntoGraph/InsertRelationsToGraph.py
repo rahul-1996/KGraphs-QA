@@ -2,8 +2,9 @@ from neo4jrestclient.client import GraphDatabase
 from neo4jrestclient.query import Q
 import re
 
-db = GraphDatabase("http://localhost:7474", username="neo4j", password="mamathahr")
+# db = GraphDatabase("http://localhost:7474", username="neo4j", password="mamathahr")
  
+db = GraphDatabase("http://ec2-54-224-85-24.compute-1.amazonaws.com:7474", username="neo4j", password="i-0264fccb248189ea5")
 # # Create some nodes with labels
 # user = db.labels.create("User")
 # u1 = db.nodes.create(name="Marco")

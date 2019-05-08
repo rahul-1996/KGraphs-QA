@@ -1,11 +1,15 @@
 from eval import get_ner
-from qa.intent import get_Intent
-from qa.execute import executeQuery
+from intent import get_intent
+from execute import executeQuery
 
 query = "Does cardiac arrest cause thyroid"
-ner_result, ners = get_ner(query)
-intent = get_Intent(ner_result)
-print("The intent is" , intent))
-res = executeQuery(intent, ners)
-print(f"Res: {res}")
+while(1):
+	print("Please enter your question:\n")
+	query = str(input())
+	ner_result, ners = get_ner(query)
+	print("Named entities:", ners)
+	print("Intent query:",ner_result)
+	intent = get_intent(("").join(ner_result))
+	print("The intent is" , intent)
+	res = executeQuery(intent, ners)
 

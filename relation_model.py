@@ -53,7 +53,7 @@ class RelNet(nn.Module):
 
     def forward(self,x,hidden):
        
-        x = x.to('cpu')
+        # x = x.to('cpu')
         batch_size = x.size(0)
         with torch.no_grad():
             encoded_layers, _ = self.bert(x)

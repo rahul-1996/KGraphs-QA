@@ -22,6 +22,7 @@ class HParams:
         self.idx2tag = {k:v for k,v in enumerate(self.VOCAB)}
 
         self.batch_size = 4
+        self.relations_batch_size = 4
         self.lr = 0.0001
         self.n_epochs = 30 
         self.hidden_size = 384
@@ -208,5 +209,5 @@ def pad_rel(batch):
         x[xx] = x[xx][0]
         x[xx] = x[xx] + [0] * (maxlen - len(x[xx]))
 
-    f = torch.LongTensor
+    f = torch.cuda.LongTensor
     return words, f(x), is_heads, tags, f(y), seqlen
